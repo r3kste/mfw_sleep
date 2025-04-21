@@ -4,15 +4,17 @@
 #include "camera_pins.h"
 #include "camera_wrap.h"
 
-
 constexpr size_t MAX_PACKET_SIZE = 1024;  // Optimal for WiFi reliability
 constexpr char SSID[] = "Adithya";
 constexpr char PASSWORD[] = "Adithya3003";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds timeout
+constexpr unsigned long ACK_TIMEOUT_MS = 500;     // 500ms timeout for acknowledgment
 
 AsyncUDP udp;
+IPAddress clientIP;
+bool clientConnected = false;
 
 void initializeCamera() {
     int cameraInitState = initCamera();
@@ -29,22 +31,16 @@ void initializeCamera() {
 }
 
 void handleUdpPacket(AsyncUDPPacket& packet) {
-    Serial.printf("UDP Packet Type: %s, From: %s:%d, To: %s:%d, Length: %d\n",
-                  packet.isBroadcast() ? "Broadcast" : packet.isMulticast() ? "Multicast" : "Unicast",
-                  packet.remoteIP().toString().c_str(), packet.remotePort(),
-                  packet.localIP().toString().c_str(), packet.localPort(),
-                  packet.length());
-
     String data = (const char*)packet.data();
-    if (data.startsWith("ON")) {
-        Serial.println("Turning on relay");
-        digitalWrite(RELAY_PIN, LOW);
-    } else if (data.startsWith("OFF")) {
-        Serial.println("Turning off relay");
-        digitalWrite(RELAY_PIN, HIGH);
-    }
 
-    packet.printf("Received %u bytes of data", packet.length());
+    if (data.startsWith("HELLO")) {
+        clientIP = packet.remoteIP();
+        clientConnected = true;
+        Serial.printf("Client connected: %s\n", clientIP.toString().c_str());
+        packet.printf("ACK");  // Acknowledge the handshake
+    } else if (data.startsWith("ACK")) {
+        // Handle acknowledgment (used during frame transmission)
+    }
 }
 
 bool setupUdpListener(int port) {
@@ -78,7 +74,33 @@ bool connectToWiFi(const char* ssid, const char* password) {
     }
 }
 
+bool sendPacketWithAck(const uint8_t* packet, size_t length) {
+    unsigned long startTime = millis();
+    bool ackReceived = false;
+
+    while (!ackReceived && millis() - startTime < ACK_TIMEOUT_MS) {
+        udp.writeTo(packet, length, clientIP, UDP_PORT);
+        delay(10);  // Small delay to prevent flooding
+
+        // Wait for acknowledgment
+        udp.onPacket([&ackReceived](AsyncUDPPacket packet) {
+            String data = (const char*)packet.data();
+            if (data.startsWith("ACK")) {
+                ackReceived = true;
+            }
+        });
+    }
+
+    return ackReceived;
+}
+
 void sendCameraFrames() {
+    if (!clientConnected) {
+        Serial.println("No client connected. Skipping frame transmission.");
+        delay(1000);
+        return;
+    }
+
     camera_fb_t* fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Failed to capture frame.");
@@ -86,6 +108,7 @@ void sendCameraFrames() {
         return;
     }
 
+    uint16_t totalPackets = (fb->len + MAX_PACKET_SIZE - 5) / (MAX_PACKET_SIZE - 4);
     size_t remaining = fb->len;
     uint8_t* buffer = fb->buf;
     uint16_t packetNumber = 0;
@@ -95,7 +118,6 @@ void sendCameraFrames() {
         uint8_t packet[MAX_PACKET_SIZE];
 
         // Header format: [Total Packets (2B) | Current Packet (2B)]
-        uint16_t totalPackets = (fb->len + MAX_PACKET_SIZE - 5) / (MAX_PACKET_SIZE - 4);
         packet[0] = totalPackets >> 8;
         packet[1] = totalPackets & 0xFF;
         packet[2] = packetNumber >> 8;
@@ -103,16 +125,18 @@ void sendCameraFrames() {
 
         memcpy(packet + 4, buffer, chunkSize);
 
-        udp.broadcast(packet, chunkSize + 4);
+        if (!sendPacketWithAck(packet, chunkSize + 4)) {
+            Serial.printf("Failed to send packet %d. Dropping frame.\n", packetNumber);
+            break;
+        }
 
         buffer += chunkSize;
         remaining -= chunkSize;
         packetNumber++;
-        delay(10);  // Prevent WiFi buffer overflow
     }
 
     esp_camera_fb_return(fb);
-    delay(10);  // ~10 FPS
+    delay(50);  // FPS = ~20
 }
 
 void setup() {
@@ -134,6 +158,5 @@ void setup() {
 }
 
 void loop() {
-    Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
     sendCameraFrames();
 }
