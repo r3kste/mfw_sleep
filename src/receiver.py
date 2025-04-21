@@ -1,7 +1,9 @@
 import socket
 import struct
+
 import cv2
 import numpy as np
+import requests
 
 
 class ESP32Cam_UDP:
@@ -21,7 +23,7 @@ class ESP32Cam_UDP:
 
     def send(self, message):
         message = message.encode("utf-8")
-        self.sock.sendto(message, (ESP32Cam_UDP.ESP_IP, ESP32Cam_UDP.PORT)) 
+        self.sock.sendto(message, (ESP32Cam_UDP.ESP_IP, ESP32Cam_UDP.PORT))
 
     def handshake(self):
         """Perform the initial handshake with the sender."""
