@@ -7,7 +7,7 @@ import requests
 
 
 class ESP32Cam_UDP:
-    ESP_IP = "192.168.0.118"
+    ESP_IP = "192.168.0.111"
     UDP_IP = "0.0.0.0"
     PORT = 6969
     HEADER_SIZE = 4  # 2B total packets, 2B packet number
@@ -78,9 +78,11 @@ class ESP32Cam_UDP:
                             self.expected_packets = 0
                             break
                     else:
-                        # Decode and display the image
+                        # Decode and display the image after vflip
                         np_image = np.frombuffer(self.current_image, dtype=np.uint8)
                         frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+                        frame = cv2.flip(frame, 0)
+                        frame = cv2.flip(frame, 1)
 
                         if frame is not None:
                             cv2.imshow("ESP32-CAM", frame)
@@ -99,7 +101,7 @@ class ESP32Cam_UDP:
 
 
 class ESP32Cam_HTTP:
-    ESP_IP = "192.168.0.118"
+    ESP_IP = "192.168.0.111"
 
     def __init__(self):
         self.url = f"http://{ESP32Cam_HTTP.ESP_IP}/capture"
@@ -123,6 +125,6 @@ class ESP32Cam_HTTP:
 
 
 esp = ESP32Cam_UDP()
-esp.handshake()  # Perform the handshake before starting the stream
+esp.handshake()
 if esp.connected:
     esp.stream()

@@ -30,6 +30,8 @@ void initializeCamera() {
     }
 }
 
+volatile bool ackReceived = false;  // Shared flag to track acknowledgment
+
 void handleUdpPacket(AsyncUDPPacket& packet) {
     String data = (const char*)packet.data();
 
@@ -39,7 +41,7 @@ void handleUdpPacket(AsyncUDPPacket& packet) {
         Serial.printf("Client connected: %s\n", clientIP.toString().c_str());
         packet.printf("ACK");  // Acknowledge the handshake
     } else if (data.startsWith("ACK")) {
-        // Handle acknowledgment (used during frame transmission)
+        ackReceived = true;  // Set the acknowledgment flag
     }
 }
 
@@ -76,19 +78,16 @@ bool connectToWiFi(const char* ssid, const char* password) {
 
 bool sendPacketWithAck(const uint8_t* packet, size_t length) {
     unsigned long startTime = millis();
-    bool ackReceived = false;
+    ackReceived = false;  // Reset the acknowledgment flag
 
-    while (!ackReceived && millis() - startTime < ACK_TIMEOUT_MS) {
+    while (!ackReceived && millis() - startTime < 1000) {  // 1 second timeout for the entire process
         udp.writeTo(packet, length, clientIP, UDP_PORT);
         delay(10);  // Small delay to prevent flooding
+    }
 
-        // Wait for acknowledgment
-        udp.onPacket([&ackReceived](AsyncUDPPacket packet) {
-            String data = (const char*)packet.data();
-            if (data.startsWith("ACK")) {
-                ackReceived = true;
-            }
-        });
+    if (!ackReceived) {
+        Serial.println("Failed to send packet within 1 second. Receiver deemed disconnected.");
+        clientConnected = false;  // Mark the receiver as disconnected
     }
 
     return ackReceived;
@@ -136,7 +135,7 @@ void sendCameraFrames() {
     }
 
     esp_camera_fb_return(fb);
-    delay(50);  // FPS = ~20
+    delay(20);
 }
 
 void setup() {
