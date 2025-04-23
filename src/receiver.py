@@ -1,9 +1,11 @@
 import socket
 import struct
+import threading
+import time
+import queue
 
 import cv2
 import numpy as np
-import requests
 
 
 class ESP32Cam_UDP:
@@ -19,6 +21,7 @@ class ESP32Cam_UDP:
         self.current_packets = {}
         self.expected_packets = 0
         self.connected = False
+        self.frame_queue = queue.Queue(maxsize=10)  # Queue for frames
         print(f"Listening for ESP32-CAM images on UDP port {self.PORT}...")
 
     def send(self, message):
@@ -35,19 +38,24 @@ class ESP32Cam_UDP:
             if data.decode("utf-8") == "ACK":
                 self.connected = True
                 print("Handshake successful. Connected to sender.")
+
+                # Start a thread to send periodic ACKs
+                threading.Thread(target=self._send_periodic_ack, daemon=True).start()
             else:
                 print("Unexpected response during handshake.")
         except socket.timeout:
             print("Handshake failed: No response from sender.")
             self.connected = False
 
-    def stream(self):
-        """Receive and process image packets."""
-        if not self.connected:
-            print("Not connected to sender. Aborting stream.")
-            return
+    def _send_periodic_ack(self):
+        """Send periodic ACK packets to keep the sender from timing out."""
+        while self.connected:
+            self.send("ACK")
+            time.sleep(0.5)  # Send ACK every 0.5 seconds
 
-        while True:
+    def receive_packets(self):
+        """Receive and assemble image packets."""
+        while self.connected:
             data, addr = self.sock.recvfrom(ESP32Cam_UDP.BUFFER_SIZE)
             header = data[: ESP32Cam_UDP.HEADER_SIZE]
             payload = data[ESP32Cam_UDP.HEADER_SIZE :]
@@ -66,59 +74,47 @@ class ESP32Cam_UDP:
 
             if len(self.current_packets) == self.expected_packets:
                 # Merge packets in order
-                self.current_image = bytearray()
+                current_image = bytearray()
                 for i in range(self.expected_packets):
                     if i in self.current_packets:
-                        self.current_image.extend(self.current_packets[i])
+                        current_image.extend(self.current_packets[i])
                     else:
                         print("Missing packet, dropping frame")
                         self.current_packets = {}
                         self.expected_packets = 0
                         break
                 else:
-                    # Decode and display the image after vflip
-                    np_image = np.frombuffer(self.current_image, dtype=np.uint8)
-                    frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
-                    frame = cv2.flip(frame, 0)
-                    frame = cv2.flip(frame, 1)
+                    # Add the frame to the queue
+                    self.frame_queue.put(current_image)
+                    self.current_packets = {}
+                    self.expected_packets = 0
 
-                    if frame is not None:
-                        cv2.imshow("ESP32-CAM", frame)
-                        if cv2.waitKey(1) & 0xFF == ord("q"):
-                            break
-                    else:
-                        print("Failed to decode image")
+    def display_frames(self):
+        """Display frames using OpenCV."""
+        while True:
+            frame_data = self.frame_queue.get()  # Get the next frame from the queue
+            np_image = np.frombuffer(frame_data, dtype=np.uint8)
+            frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+            frame = cv2.flip(frame, 0)
 
-                self.current_packets = {}
-                self.expected_packets = 0
+            if frame is not None:
+                cv2.imshow("ESP32-CAM", frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+            else:
+                print("Failed to decode image")
 
-    def recv_text(self):
-        data, addr = self.sock.recvfrom(ESP32Cam_UDP.BUFFER_SIZE)
-        print(f"Received {data} from {addr}")
-
-
-class ESP32Cam_HTTP:
-    ESP_IP = "192.168.0.111"
-
-    def __init__(self):
-        self.url = f"http://{ESP32Cam_HTTP.ESP_IP}/capture"
-        print(f"Listening for ESP32-CAM images on HTTP {self.url}...")
+        cv2.destroyAllWindows()
 
     def stream(self):
-        while True:
-            response = requests.get(self.url, stream=True)
-            if response.status_code == 200:
-                image = np.array(bytearray(response.content), dtype=np.uint8)
-                frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        """Start the streaming process."""
+        if not self.connected:
+            print("Not connected to sender. Aborting stream.")
+            return
 
-                if frame is not None:
-                    cv2.imshow("ESP32-CAM", frame)
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        break
-                else:
-                    print("Failed to decode image")
-            else:
-                print(f"Failed to get image: {response.status_code}")
+        # Start threads for receiving packets and displaying frames
+        threading.Thread(target=self.receive_packets, daemon=True).start()
+        self.display_frames()
 
 
 esp = ESP32Cam_UDP()
