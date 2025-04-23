@@ -18,7 +18,7 @@ class ESP32Cam_UDP:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.UDP_IP, self.PORT))
-        self.current_packets = {}
+        self.current_packets = None  # Will hold the list of packets
         self.expected_packets = 0
         self.connected = False
         self.frame_queue = queue.Queue(maxsize=10)  # Queue for frames
@@ -67,32 +67,25 @@ class ESP32Cam_UDP:
             self.send("ACK")
 
             if packet_num == 0:
-                self.current_packets = {}
+                self.current_packets = [None] * total_packets
                 self.expected_packets = total_packets
 
-            self.current_packets[packet_num] = payload
+            if self.current_packets is not None:
+                self.current_packets[packet_num] = payload
 
-            if len(self.current_packets) == self.expected_packets:
-                # Merge packets in order
+            if self.current_packets is not None and all(self.current_packets):
                 current_image = bytearray()
-                for i in range(self.expected_packets):
-                    if i in self.current_packets:
-                        current_image.extend(self.current_packets[i])
-                    else:
-                        print("Missing packet, dropping frame")
-                        self.current_packets = {}
-                        self.expected_packets = 0
-                        break
-                else:
-                    # Add the frame to the queue
-                    self.frame_queue.put(current_image)
-                    self.current_packets = {}
-                    self.expected_packets = 0
+                for packet in self.current_packets:
+                    current_image.extend(packet)
+
+                self.frame_queue.put(current_image)
+                self.current_packets = None
+                self.expected_packets = 0
 
     def display_frames(self):
         """Display frames using OpenCV."""
         while True:
-            frame_data = self.frame_queue.get()  # Get the next frame from the queue
+            frame_data = self.frame_queue.get()
             np_image = np.frombuffer(frame_data, dtype=np.uint8)
             frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
             frame = cv2.flip(frame, 0)
