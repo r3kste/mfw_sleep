@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ESP32Cam_UDP:
-    ESP_IP = "192.168.0.111"
+    ESP_IP = "192.168.0.103"
     UDP_IP = "0.0.0.0"
     PORT = 6969
     HEADER_SIZE = 4  # 2B total packets, 2B packet number
@@ -18,7 +18,7 @@ class ESP32Cam_UDP:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.UDP_IP, self.PORT))
-        self.current_packets = None  # Will hold the list of packets
+        self.current_packets = {}
         self.expected_packets = 0
         self.connected = False
         self.frame_queue = queue.Queue(maxsize=10)  # Queue for frames
@@ -67,20 +67,26 @@ class ESP32Cam_UDP:
             self.send("ACK")
 
             if packet_num == 0:
-                self.current_packets = [None] * total_packets
+                self.current_packets = {}
                 self.expected_packets = total_packets
 
-            if self.current_packets is not None:
-                self.current_packets[packet_num] = payload
+            self.current_packets[packet_num] = payload
 
-            if self.current_packets is not None and all(self.current_packets):
+            if len(self.current_packets) == self.expected_packets:
                 current_image = bytearray()
-                for packet in self.current_packets:
-                    current_image.extend(packet)
-
-                self.frame_queue.put(current_image)
-                self.current_packets = None
-                self.expected_packets = 0
+                for i in range(self.expected_packets):
+                    if i in self.current_packets:
+                        current_image.extend(self.current_packets[i])
+                    else:
+                        print("Missing packet, dropping frame")
+                        self.current_packets = {}
+                        self.expected_packets = 0
+                        break
+                else:
+                    # Add the frame to the queue
+                    self.frame_queue.put(current_image)
+                    self.current_packets = {}
+                    self.expected_packets = 0
 
     def display_frames(self):
         """Display frames using OpenCV."""
