@@ -65,33 +65,30 @@ class ESP32Cam_UDP:
             self.current_packets[packet_num] = payload
 
             if len(self.current_packets) == self.expected_packets:
-                # Check if all packets are received
-                if len(self.current_packets) == self.expected_packets:
-                    # Merge packets in order
-                    self.current_image = bytearray()
-                    for i in range(self.expected_packets):
-                        if i in self.current_packets:
-                            self.current_image.extend(self.current_packets[i])
-                        else:
-                            print("Missing packet, dropping frame")
-                            self.current_packets = {}
-                            self.expected_packets = 0
+                # Merge packets in order
+                self.current_image = bytearray()
+                for i in range(self.expected_packets):
+                    if i in self.current_packets:
+                        self.current_image.extend(self.current_packets[i])
+                    else:
+                        print("Missing packet, dropping frame")
+                        self.current_packets = {}
+                        self.expected_packets = 0
+                        break
+                else:
+                    # Decode and display the image after vflip
+                    np_image = np.frombuffer(self.current_image, dtype=np.uint8)
+                    frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+                    frame = cv2.flip(frame, 0)
+                    frame = cv2.flip(frame, 1)
+
+                    if frame is not None:
+                        cv2.imshow("ESP32-CAM", frame)
+                        if cv2.waitKey(1) & 0xFF == ord("q"):
                             break
                     else:
-                        # Decode and display the image after vflip
-                        np_image = np.frombuffer(self.current_image, dtype=np.uint8)
-                        frame = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
-                        frame = cv2.flip(frame, 0)
-                        frame = cv2.flip(frame, 1)
+                        print("Failed to decode image")
 
-                        if frame is not None:
-                            cv2.imshow("ESP32-CAM", frame)
-                            if cv2.waitKey(1) & 0xFF == ord("q"):
-                                break
-                        else:
-                            print("Failed to decode image")
-                else:
-                    print("Incomplete frame, dropping")
                 self.current_packets = {}
                 self.expected_packets = 0
 
