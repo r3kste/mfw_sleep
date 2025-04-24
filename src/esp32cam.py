@@ -169,6 +169,7 @@ class ESP32Cam:
             print("Not connected to sender. Aborting stream.")
             return
 
+        print("Starting stream")
         # Start threads for receiving packets and displaying frames
         threading.Thread(target=self.receive_packets, daemon=True).start()
         self.display_frames(record)

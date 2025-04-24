@@ -9,7 +9,7 @@ import config
 def main():
     parser = argparse.ArgumentParser(description="ESP32-CAM Eye Openness Detection")
     parser.add_argument(
-        "-u", "--user", type=str, required=True, help="User name for the model"
+        "-u", "--user", type=str, default="anton", help="User name for the model"
     )
     parser.add_argument(
         "--ip", type=str, default=config.IP, help="IP address of the ESP32-CAM"
@@ -24,8 +24,8 @@ def main():
     )
 
     esp32cam.main(esp)
-    train.main()
-    predictor.main(esp)
+    train.main(user=parser.parse_args().user)
+    predictor.main(esp, user=parser.parse_args().user)
 
 
 if __name__ == "__main__":

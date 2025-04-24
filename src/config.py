@@ -9,9 +9,13 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # /mfw_sleep/trained
 TRAINED_MODELS_DIR = os.path.join(PROJECT_DIR, "trained")  
+if not os.path.exists(TRAINED_MODELS_DIR):
+    os.makedirs(TRAINED_MODELS_DIR)
 
 # /mfw_sleep/output
 RECORDED_FRAMES_DIR = os.path.join(PROJECT_DIR, "output")
+if not os.path.exists(RECORDED_FRAMES_DIR):
+    os.makedirs(RECORDED_FRAMES_DIR)
 
 subfolders = {
     "open": 1,
