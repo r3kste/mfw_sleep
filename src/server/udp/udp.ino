@@ -10,7 +10,8 @@ constexpr char PASSWORD[] = "Adithya3003";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds timeout
-constexpr unsigned long ACK_TIMEOUT_MS = 500;     // 500ms timeout for acknowledgment
+constexpr unsigned long ACK_TIMEOUT_MS = 1000;     // 500ms timeout for acknowledgment
+int BUZZER_PIN = D9;
 
 AsyncUDP udp;
 IPAddress clientIP;
@@ -140,6 +141,7 @@ void sendCameraFrames() {
 
 void setup() {
     Serial.begin(115200);
+    pinMode(BUZZER_PIN, OUTPUT);
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, HIGH);  // Ensure relay is off initially
 
