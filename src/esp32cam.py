@@ -42,7 +42,21 @@ class ESP32Cam:
 
     def handshake(self):
         """Perform the initial handshake with the sender."""
-        print("Starting handshake")
+        print("Waiting for ESP32-CAM broadcast...")
+        self.sock.settimeout(10)
+        try:
+            while True:
+                data, addr = self.sock.recvfrom(self.buffer_size)
+                if data.decode("utf-8") == "I_AM_THE_CAMERA":
+                    self.ip = addr[0]
+                    print(f"ESP32-CAM found at {self.ip}. Starting handshake.")
+                    break
+        except socket.timeout:
+            print("Failed to detect ESP32-CAM broadcast. Aborting handshake.")
+            self.connected = False
+            return
+
+        # Proceed with the handshake
         self.send("HELLO")
         self.sock.settimeout(5)
         try:
@@ -74,8 +88,6 @@ class ESP32Cam:
 
             total_packets = struct.unpack(">H", header[:2])[0]
             packet_num = struct.unpack(">H", header[2:4])[0]
-
-            self.send("ACK")
 
             if packet_num == 0:
                 self.current_packets = {}
