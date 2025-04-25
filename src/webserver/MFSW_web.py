@@ -17,9 +17,11 @@ BUFFER_SIZE = 1024
 alarm_triggered = False
 is_alarm_playing = False
 
+
 def udp_listener():
     global alarm_triggered
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow address reuse
     sock.bind((UDP_IP, UDP_PORT))
     print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...")
     while True:
@@ -29,26 +31,44 @@ def udp_listener():
         if message == "El Psy Congroo":
             alarm_triggered = True
 
-@app.route("/start", methods=["GET"])
-def start():
-    global alarm_triggered
-    if alarm_triggered:
-        return jsonify({"message": "El Psy Congroo"})
-    return jsonify({"message": "Listening..."})
+
+def broadcast_message(message):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.sendto(message.encode("utf-8"), ("255.255.255.255", UDP_PORT))
+    print(f"Broadcasted message: {message}")
+
+
+@app.route("/camera/start", methods=["GET"])
+def start_camera():
+    print("Sending camera start command")
+    broadcast_message("CAM_ON")
+    return "Camera started", 200
+
+
+@app.route("/camera/stop", methods=["GET"])
+def stop_camera():
+    print("Sending camera stop command")
+    broadcast_message("CAM_OFF")
+    return "Camera stopped", 200
+
 
 @app.route("/alarm/start", methods=["GET"])
 def start_alarm():
     global is_alarm_playing
+    print("Alarm started")
     if not is_alarm_playing:
         is_alarm_playing = True
         threading.Thread(target=play_alarm, daemon=True).start()
     return "Alarm started", 200
+
 
 @app.route("/alarm/stop", methods=["GET"])
 def stop_alarm():
     global is_alarm_playing
     is_alarm_playing = False
     return "Alarm stopped", 200
+
 
 def play_alarm():
     global is_alarm_playing
@@ -65,6 +85,7 @@ def play_alarm():
             break
     pygame.mixer.music.stop()
 
+
 if __name__ == "__main__":
     threading.Thread(target=udp_listener, daemon=True).start()
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8080, debug=True)

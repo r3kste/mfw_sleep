@@ -1,35 +1,34 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.log("MFSW_web.js loaded");
 
-    let isListening = false;
     let isAlarmPlaying = false;
 
-    document.getElementById("startButton").addEventListener("click", () => {
-        const startButton = document.getElementById("startButton");
-
-        if (!isListening) {
-            // Start listening
-            isListening = true;
-            startButton.textContent = "Listening... Click again to stop";
-
-            fetch("http://localhost:8080/start")
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === "El Psy Congroo") {
-                        triggerAlarm();
-                    }
-                })
-                .catch(error => console.error("Error:", error));
-        } else {
-            // Show custom confirmation modal
-            showConfirmModal(() => {
-                // User confirmed
-                isListening = false;
-                startButton.textContent = "Start";
-                alert("Stopped listening.");
-            });
-        }
+    // Camera Start Button
+    document.getElementById("cameraStartButton").addEventListener("click", () => {
+        fetch("http://localhost:8080/camera/start")
+            .then(response => {
+                if (response.ok) {
+                    alert("Camera started!");
+                } else {
+                    alert("Failed to start the camera.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
     });
+
+    // Camera Stop Button
+    document.getElementById("cameraStopButton").addEventListener("click", () => {
+        fetch("http://localhost:8080/camera/stop")
+            .then(response => {
+                if (response.ok) {
+                    alert("Camera stopped!");
+                } else {
+                    alert("Failed to stop the camera.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+    }
+    );
 
     document.getElementById("alarmButton").addEventListener("click", () => {
         if (isAlarmPlaying) {
