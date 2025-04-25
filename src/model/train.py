@@ -57,7 +57,6 @@ class EyeOpennessModel(nn.Module):
             nn.Linear(32 * 64 * 64, 128),
             nn.ReLU(),
             nn.Linear(128, 1),
-            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -88,7 +87,7 @@ def main(user: str):
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     model = EyeOpennessModel().to(device)
-    criterion = nn.BCELoss()
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
     )

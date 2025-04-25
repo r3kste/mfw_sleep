@@ -5,13 +5,13 @@
 #include "camera_wrap.h"
 
 constexpr size_t MAX_PACKET_SIZE = 1024;  // Optimal for WiFi reliability
-constexpr char SSID[] = "r3kstroid";
-constexpr char PASSWORD[] = "12345678";
+constexpr char SSID[] = "Omayawa";
+constexpr char PASSWORD[] = "MFWS2025";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;     // 500ms timeout for acknowledgment
-int LED_PIN = D9;
+int LED_PIN = D1;
 
 AsyncUDP udp;
 IPAddress clientIP;

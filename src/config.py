@@ -1,6 +1,6 @@
 import os
 
-IP = "192.168.195.131"
+IP = "192.168.29.131"
 PORT = 6969
 HEADER_SIZE = 4
 BUFFER_SIZE = 1024
@@ -21,6 +21,13 @@ subfolders = {
     "open": 1,
     "close": 0,
 }
+
+# subfolders = {
+#     "full_open": 1,
+#     "part_open": 0.75,
+#     "half_open": 0.5,
+#     "full_close": 0,
+# }
 
 batch_size = 16
 num_epochs = 10
