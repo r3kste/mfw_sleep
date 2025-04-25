@@ -5,8 +5,8 @@
 #include "camera_wrap.h"
 
 constexpr size_t MAX_PACKET_SIZE = 1024;  // Optimal for WiFi reliability
-constexpr char SSID[] = "Omayawa";
-constexpr char PASSWORD[] = "MFWS2025";
+constexpr char SSID[] = "Adithya";
+constexpr char PASSWORD[] = "Adithya3003";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds timeout
@@ -40,22 +40,22 @@ void handleUdpPacket(AsyncUDPPacket& packet) {
         clientIP = packet.remoteIP();
         clientConnected = true;
         Serial.printf("Client connected: %s\n", clientIP.toString().c_str());
-        // send ACK to client
-        udp.writeTo("ACK", strlen(ackMessage), clientIP, UDP_PORT);
+        constexpr char ackMessage[] = "ACK";
+        udp.writeTo((const uint8_t*)ackMessage, strlen(ackMessage), clientIP, UDP_PORT);
     } else if (data.startsWith("ACK")) {
         ackReceived = true;  // Set the acknowledgment flag
     } else if (data.startsWith("LED_")) {
         // Extract brightness value from the command
         int brightness = data.substring(4).toInt();
-        brightness = constrain(brightness, 0, 255);  // Ensure brightness is within 0-255
-        analogWrite(LED_PIN, brightness);  // Set LED brightness
+        brightness = constrain(brightness, 0, 255);  
+        analogWrite(LED_PIN, brightness);
         Serial.printf("LED brightness set to: %d\n", brightness);
     }
 }
 
 void broadcastCameraPresence() {
     const char* message = "I_AM_THE_CAMERA";
-    if (udp.broadcastTo(message, UDP_PORT)) {
+    if (udp.broadcastTo((uint8_t*)message, strlen(message), UDP_PORT)) {
         Serial.println("Broadcast message sent: I_AM_THE_CAMERA");
     } else {
         Serial.println("Failed to send broadcast message.");
@@ -173,9 +173,14 @@ void setup() {
         return;
     }
 
-    broadcastCameraPresence();
 }
 
 void loop() {
+    if (!clientConnected) {
+        broadcastCameraPresence();
+        delay(1000);
+        return;
+    }
+
     sendCameraFrames();
 }
