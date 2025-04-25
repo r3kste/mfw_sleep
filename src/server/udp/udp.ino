@@ -40,7 +40,8 @@ void handleUdpPacket(AsyncUDPPacket& packet) {
         clientIP = packet.remoteIP();
         clientConnected = true;
         Serial.printf("Client connected: %s\n", clientIP.toString().c_str());
-        packet.printf("ACK");  // Acknowledge the handshake
+        // send ACK to client
+        udp.writeTo("ACK", strlen(ackMessage), clientIP, UDP_PORT);
     } else if (data.startsWith("ACK")) {
         ackReceived = true;  // Set the acknowledgment flag
     } else if (data.startsWith("LED_")) {
@@ -49,6 +50,15 @@ void handleUdpPacket(AsyncUDPPacket& packet) {
         brightness = constrain(brightness, 0, 255);  // Ensure brightness is within 0-255
         analogWrite(LED_PIN, brightness);  // Set LED brightness
         Serial.printf("LED brightness set to: %d\n", brightness);
+    }
+}
+
+void broadcastCameraPresence() {
+    const char* message = "I_AM_THE_CAMERA";
+    if (udp.broadcastTo(message, UDP_PORT)) {
+        Serial.println("Broadcast message sent: I_AM_THE_CAMERA");
+    } else {
+        Serial.println("Failed to send broadcast message.");
     }
 }
 
@@ -162,6 +172,8 @@ void setup() {
         Serial.println("Exiting setup due to UDP listener failure.");
         return;
     }
+
+    broadcastCameraPresence();
 }
 
 void loop() {
