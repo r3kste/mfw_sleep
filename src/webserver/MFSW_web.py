@@ -1,0 +1,70 @@
+from flask import Flask, jsonify, send_file
+from flask_cors import CORS  # Import Flask-CORS
+import socket
+import threading
+import os
+import time
+import pygame
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
+
+# UDP server configuration
+UDP_IP = "0.0.0.0"
+UDP_PORT = 5005
+BUFFER_SIZE = 1024
+alarm_triggered = False
+is_alarm_playing = False
+
+def udp_listener():
+    global alarm_triggered
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((UDP_IP, UDP_PORT))
+    print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...")
+    while True:
+        data, addr = sock.recvfrom(BUFFER_SIZE)
+        message = data.decode("utf-8")
+        print(f"Received message: {message}")
+        if message == "El Psy Congroo":
+            alarm_triggered = True
+
+@app.route("/start", methods=["GET"])
+def start():
+    global alarm_triggered
+    if alarm_triggered:
+        return jsonify({"message": "El Psy Congroo"})
+    return jsonify({"message": "Listening..."})
+
+@app.route("/alarm/start", methods=["GET"])
+def start_alarm():
+    global is_alarm_playing
+    if not is_alarm_playing:
+        is_alarm_playing = True
+        threading.Thread(target=play_alarm, daemon=True).start()
+    return "Alarm started", 200
+
+@app.route("/alarm/stop", methods=["GET"])
+def stop_alarm():
+    global is_alarm_playing
+    is_alarm_playing = False
+    return "Alarm stopped", 200
+
+def play_alarm():
+    global is_alarm_playing
+    alarm_file = os.path.join(app.root_path, "static", "alarm.mp3")
+    pygame.mixer.init()
+    while is_alarm_playing:
+        if os.path.exists(alarm_file):
+            pygame.mixer.music.load(alarm_file)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy() and is_alarm_playing:
+                pygame.time.Clock().tick(10)
+        else:
+            print("Alarm file not found")
+            break
+    pygame.mixer.music.stop()
+
+if __name__ == "__main__":
+    threading.Thread(target=udp_listener, daemon=True).start()
+    app.run(host="0.0.0.0", port=8080)
