@@ -86,6 +86,8 @@ class ESP32Cam:
             header = data[: self.header_size]
             payload = data[self.header_size :]
 
+            self.send("ACK")
+
             total_packets = struct.unpack(">H", header[:2])[0]
             packet_num = struct.unpack(">H", header[2:4])[0]
 
