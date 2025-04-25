@@ -22,10 +22,15 @@ def main():
         ip=parser.parse_args().ip,
         port=parser.parse_args().port,
     )
+    esp.handshake()
+    if not esp.connected:
+        print("Failed to connect to ESP32-CAM. Exiting.")
+        return
 
     esp32cam.main(esp)
     train.main(user=parser.parse_args().user)
     predictor.main(esp, user=parser.parse_args().user)
+    esp.send("LED_0")
 
 
 if __name__ == "__main__":

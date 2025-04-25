@@ -5,13 +5,13 @@
 #include "camera_wrap.h"
 
 constexpr size_t MAX_PACKET_SIZE = 1024;  // Optimal for WiFi reliability
-constexpr char SSID[] = "Adithya";
-constexpr char PASSWORD[] = "Adithya3003";
+constexpr char SSID[] = "r3kstroid";
+constexpr char PASSWORD[] = "12345678";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;     // 500ms timeout for acknowledgment
-int BUZZER_PIN = D9;
+int LED_PIN = D9;
 
 AsyncUDP udp;
 IPAddress clientIP;
@@ -43,6 +43,12 @@ void handleUdpPacket(AsyncUDPPacket& packet) {
         packet.printf("ACK");  // Acknowledge the handshake
     } else if (data.startsWith("ACK")) {
         ackReceived = true;  // Set the acknowledgment flag
+    } else if (data.startsWith("LED_")) {
+        // Extract brightness value from the command
+        int brightness = data.substring(4).toInt();
+        brightness = constrain(brightness, 0, 255);  // Ensure brightness is within 0-255
+        analogWrite(LED_PIN, brightness);  // Set LED brightness
+        Serial.printf("LED brightness set to: %d\n", brightness);
     }
 }
 
@@ -141,9 +147,9 @@ void sendCameraFrames() {
 
 void setup() {
     Serial.begin(115200);
-    pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
     pinMode(RELAY_PIN, OUTPUT);
-    digitalWrite(RELAY_PIN, HIGH);  // Ensure relay is off initially
+    digitalWrite(RELAY_PIN, HIGH);
 
     initializeCamera();
 

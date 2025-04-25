@@ -18,6 +18,8 @@ class EyeDataset(Dataset):
 
         for subfolder, label in subfolders.items():
             folder_path = os.path.join(root_dir, subfolder)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
             for filename in os.listdir(folder_path):
                 if filename.lower().endswith((".png", ".jpg", ".jpeg")):
                     self.data.append(os.path.join(folder_path, filename))
@@ -72,6 +74,7 @@ def main(user: str):
     batch_size = config.batch_size
     num_epochs = config.num_epochs
     learning_rate = config.learning_rate
+    weight_decay = config.weight_decay
 
     transform = transforms.Compose(
         [
@@ -86,7 +89,9 @@ def main(user: str):
 
     model = EyeOpennessModel().to(device)
     criterion = nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
 
     print("Starting training...")
     for epoch in range(num_epochs):

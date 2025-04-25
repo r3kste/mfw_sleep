@@ -30,9 +30,10 @@ class ESP32Cam:
         self.expected_packets = 0
         self.connected = False
         self.frame_queue = queue.Queue(maxsize=10)
-        self.open_frames = []
-        self.close_frames = []
-        self.is_eye_open = True
+        self.frames = {
+            key: [] for key in config.subfolders.keys()
+        }  # Initialize frames for each subfolder
+        self.current_state = None
         print(f"Listening for ESP32-CAM images on UDP port {self.port}")
 
     def send(self, message: str):
@@ -103,6 +104,12 @@ class ESP32Cam:
         frame = cv2.flip(frame, 0)
         return frame
 
+    @staticmethod
+    def calculate_brightness(frame):
+        """Calculate the average brightness of the frame."""
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return gray.mean()
+
     def display_frames(self, record: bool = False):
         while True:
             frame_data = self.frame_queue.get()
@@ -111,25 +118,26 @@ class ESP32Cam:
             if frame is not None:
                 cv2.imshow("ESP32-CAM", frame)
 
+                # Calculate brightness and determine LED state
+                brightness = self.calculate_brightness(frame)
+                self.send(f"LED_{255 - int(brightness)}")
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord("q"):
                     break
-                elif key == ord("c"):
-                    # Toggle eye state
-                    self.is_eye_open = not self.is_eye_open
-                    print(
-                        "Eye state toggled:", "Open" if self.is_eye_open else "Closed"
-                    )
+                elif key in [ord(str(i)) for i in range(1, len(config.subfolders) + 1)]:
+                    # Change state based on key press
+                    state_index = int(chr(key)) - 1
+                    self.current_state = list(config.subfolders.keys())[state_index]
+                    print(f"State changed to: {self.current_state}")
 
-                if self.is_eye_open:
-                    self.open_frames.append(frame)
-                else:
-                    self.close_frames.append(frame)
+                # Save frames based on the current state
+                if self.current_state is not None:
+                    self.frames[self.current_state].append(frame)
             else:
                 print("Failed to decode image")
 
         cv2.destroyAllWindows()
-        if record:
+        if record and self.current_state is not None:
             print("Recording frames")
             self.save_frames()
 
@@ -147,21 +155,13 @@ class ESP32Cam:
             shutil.rmtree(output_dir)
         os.makedirs(output_dir, exist_ok=True)
 
-        open_dir = os.path.join(output_dir, "open")
-        close_dir = os.path.join(output_dir, "close")
+        for state, frames in self.frames.items():
+            state_dir = os.path.join(output_dir, state)
+            os.makedirs(state_dir, exist_ok=True)
+            for i, frame in enumerate(frames):
+                cv2.imwrite(os.path.join(state_dir, f"{state}_{i}.jpg"), frame)
 
-        os.makedirs(open_dir, exist_ok=True)
-        os.makedirs(close_dir, exist_ok=True)
-
-        for i, frame in enumerate(self.open_frames):
-            cv2.imwrite(os.path.join(open_dir, f"open_{i}.jpg"), frame)
-
-        for i, frame in enumerate(self.close_frames):
-            cv2.imwrite(os.path.join(close_dir, f"close_{i}.jpg"), frame)
-
-        print(
-            f"Saved {len(self.open_frames)} open eye frames and {len(self.close_frames)} closed eye frames."
-        )
+        print(f"Saved frames for states: {', '.join(self.frames.keys())}")
 
     def stream(self, record=False):
         """Start the streaming process."""
@@ -176,11 +176,7 @@ class ESP32Cam:
 
 
 def main(esp: ESP32Cam):
-    esp.handshake()
-    if esp.connected:
-        esp.stream(record=True)
-    else:
-        print("Failed to connect to ESP32-CAM.")
+    esp.stream(record=True)
 
 
 if __name__ == "__main__":

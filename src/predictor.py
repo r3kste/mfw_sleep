@@ -1,3 +1,4 @@
+import os
 from collections import deque
 from threading import Thread
 
@@ -5,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import torch
 
+import config
 import esp32cam
 from model.train import EyeOpennessModel
 
@@ -29,7 +31,7 @@ def update_graph():
         ax.set_xlabel("Time (frames)")
         ax.set_ylabel("Prediction")
         ax.legend()
-        plt.pause(0.05)
+        plt.pause(0.1)
 
 
 def main(esp: esp32cam.ESP32Cam, user: str):
@@ -38,7 +40,7 @@ def main(esp: esp32cam.ESP32Cam, user: str):
     model = EyeOpennessModel().to(device)
     model.load_state_dict(
         torch.load(
-            f"/home/r3kste/code/mfw_sleep/src/model/trained/{user}.pth",
+            os.path.join(config.TRAINED_MODELS_DIR, f"{user}.pth"),
             map_location=device,
         )
     )
