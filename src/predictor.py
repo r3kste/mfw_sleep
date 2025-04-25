@@ -1,6 +1,7 @@
 import os
 from collections import deque
 from threading import Thread
+import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -9,6 +10,39 @@ import torch
 import config
 import esp32cam
 from model.train import EyeOpennessModel
+
+
+class Algorithm:
+    """Class containing various algorithms for detecting sleepiness."""
+
+    @staticmethod
+    def simple_algorithm(predictions):
+        """Simple algorithm to check if the average prediction is below a threshold."""
+        # look at last 10 predictions
+        # if average is below 0.5, return True
+
+        preds = predictions[-10:]
+        if len(preds) == 0:
+            return False
+
+        mean_pred = sum(preds) / len(preds)
+        return mean_pred < 0.5
+
+    @staticmethod
+    def perclos(predictions):
+        """Calculate the PERCLOS (Percentage of Eye Closure) metric."""
+        if len(predictions) == 0:
+            return 0
+
+        woke_threshold = 0.75
+        sleep_threshold = 0.25
+
+        sleep_cnt = 0
+        for p in predictions:
+            if p < sleep_threshold:
+                sleep_cnt += 1
+
+        return sleep_cnt / len(predictions) <= 0.5
 
 
 def preprocess_frame(frame):

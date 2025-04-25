@@ -9,13 +9,16 @@ constexpr char SSID[] = "Adithya";
 constexpr char PASSWORD[] = "Adithya3003";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
+constexpr int APP_PORT = 5005;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000; // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;   // 500ms timeout for acknowledgment
 int LED_PIN = D1;
 
 AsyncUDP udp;
+AsyncUDP app;
 IPAddress clientIP;
 bool clientConnected = false;
+bool cameraEnabled = true;
 
 void initializeCamera()
 {
@@ -63,6 +66,30 @@ void handleUdpPacket(AsyncUDPPacket &packet)
     }
 }
 
+void handleAppPacket(AsyncUDPPacket &packet)
+{
+    String data = (const char *)packet.data();
+
+    if (data.startsWith("CAM_ON"))
+    {
+        cameraEnabled = true;
+        Serial.println("Camera turned ON.");
+    }
+    else if (data.startsWith("CAM_OFF"))
+    {
+        cameraEnabled = false;
+        Serial.println("Camera turned OFF.");
+    }
+    else if (data.startsWith("LED_"))
+    {
+        // Extract brightness value from the command
+        int brightness = data.substring(4).toInt();
+        brightness = constrain(brightness, 0, 255);
+        analogWrite(LED_PIN, brightness);
+        Serial.printf("LED brightness set to: %d\n", brightness);
+    }
+}
+
 void broadcastCameraPresence()
 {
     while (!clientConnected)
@@ -77,6 +104,22 @@ void broadcastCameraPresence()
             Serial.println("Failed to send broadcast message.");
         }
         delay(1000);
+    }
+}
+
+bool setupAppListener(int port)
+{
+    if (app.listen(port))
+    {
+        Serial.printf("App Listening on IP: %s, Port: %d\n", WiFi.localIP().toString().c_str(), port);
+        app.onPacket([](AsyncUDPPacket packet)
+                     { handleAppPacket(packet); }); 
+        return true;
+    }
+    else
+    {
+        Serial.println("Failed to start App listener.");
+        return false;
     }
 }
 
@@ -206,6 +249,12 @@ void setup()
         return;
     }
 
+    if (!setupAppListener(APP_PORT))
+    {
+        Serial.println("Exiting setup due to App listener failure.");
+        return;
+    }
+
     if (!setupUdpListener(UDP_PORT))
     {
         Serial.println("Exiting setup due to UDP listener failure.");
@@ -221,6 +270,9 @@ void loop()
     }
     else
     {
-        sendCameraFrames();
+        if (cameraEnabled)
+        {
+            sendCameraFrames();
+        }
     }
 }
