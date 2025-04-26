@@ -5,14 +5,14 @@
 #include "camera_wrap.h"
 
 constexpr size_t MAX_PACKET_SIZE = 1024; // Optimal for WiFi reliability
-constexpr char SSID[] = "Factorio";
-constexpr char PASSWORD[] = "Factorio";
+constexpr char SSID[] = "Adithya";
+constexpr char PASSWORD[] = "Adithya3003";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr int APP_PORT = 5005;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000; // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;   // 500ms timeout for acknowledgment
-int LED_PIN = D1;
+int LED_PIN = D2;
 int IR_pin = D0;
 
 AsyncUDP udp;
