@@ -13,12 +13,20 @@ constexpr int APP_PORT = 5005;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000; // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;   // 500ms timeout for acknowledgment
 int LED_PIN = D1;
+int IR_pin = D11;
 
 AsyncUDP udp;
 AsyncUDP app;
 IPAddress clientIP;
 bool clientConnected = false;
 bool cameraEnabled = true;
+
+int IR_read(){
+    int value = digitalRead(IR_pin);
+    Serial.printf("IR sensor value: %d\n", value);
+    return value;
+}
+
 
 void initializeCamera()
 {
@@ -201,25 +209,27 @@ void sendCameraFrames()
         return;
     }
 
-    uint16_t totalPackets = (fb->len + MAX_PACKET_SIZE - 5) / (MAX_PACKET_SIZE - 4);
+    uint16_t totalPackets = (fb->len + MAX_PACKET_SIZE - 6) / (MAX_PACKET_SIZE - 5); // Reserve 5 bytes for header
     size_t remaining = fb->len;
     uint8_t *buffer = fb->buf;
     uint16_t packetNumber = 0;
 
     while (remaining > 0)
     {
-        size_t chunkSize = min(MAX_PACKET_SIZE - 4, remaining); // Reserve 4 bytes for header
+        size_t chunkSize = min(MAX_PACKET_SIZE - 5, remaining); // Reserve 5 bytes for header
         uint8_t packet[MAX_PACKET_SIZE];
+        uint8_t ir_status = IR_read(); // Read the IR sensor status
 
-        // Header format: [Total Packets (2B) | Current Packet (2B)]
+        // Header format: [Total Packets (2B) | Current Packet (2B) | IR Status (1B)]
         packet[0] = totalPackets >> 8;
         packet[1] = totalPackets & 0xFF;
         packet[2] = packetNumber >> 8;
         packet[3] = packetNumber & 0xFF;
+        packet[4] = ir_status; // Add IR sensor status to the header
 
-        memcpy(packet + 4, buffer, chunkSize);
+        memcpy(packet + 5, buffer, chunkSize); // Copy image data after the header
 
-        if (!sendPacketWithAck(packet, chunkSize + 4))
+        if (!sendPacketWithAck(packet, chunkSize + 5))
         {
             Serial.printf("Failed to send packet %d. Dropping frame.\n", packetNumber);
             break;
