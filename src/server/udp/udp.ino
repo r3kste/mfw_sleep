@@ -5,8 +5,8 @@
 #include "camera_wrap.h"
 
 constexpr size_t MAX_PACKET_SIZE = 1024; // Optimal for WiFi reliability
-constexpr char SSID[] = "Adithya";
-constexpr char PASSWORD[] = "Adithya3003";
+constexpr char SSID[] = "Factorio";
+constexpr char PASSWORD[] = "Factorio";
 constexpr int RELAY_PIN = 23;
 constexpr int UDP_PORT = 6969;
 constexpr int APP_PORT = 5005;
