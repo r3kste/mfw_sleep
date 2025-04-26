@@ -34,6 +34,7 @@ class ESP32Cam:
             key: [] for key in config.subfolders.keys()
         }  # Initialize frames for each subfolder
         self.current_state = None
+        self.ir_status = None
         print(f"Listening for ESP32-CAM images on UDP port {self.port}")
 
     def send(self, message: str):
@@ -88,8 +89,14 @@ class ESP32Cam:
 
             self.send("ACK")
 
+            # Parse the header
             total_packets = struct.unpack(">H", header[:2])[0]
             packet_num = struct.unpack(">H", header[2:4])[0]
+            ir_status = header[4]  # Extract the IR sensor status (5th byte)
+
+            # Store the IR status in a variable
+            self.ir_status = ir_status
+            print(f"Received IR status: {self.ir_status}")
 
             if packet_num == 0:
                 self.current_packets = {}
