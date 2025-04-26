@@ -57,3 +57,15 @@ button:disabled {
     padding: 10px 15px;
     font-size: 14px;
 }
+
+#buzzerState {
+    text-align: center;
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+#buzzerOffButton {
+    background-color: red;
+    color: white;
+    font-weight: bold;
+}

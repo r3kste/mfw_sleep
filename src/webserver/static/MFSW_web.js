@@ -27,54 +27,102 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             })
             .catch(error => console.error("Error:", error));
-    }
-    );
+    });
 
-    document.getElementById("alarmButton").addEventListener("click", () => {
-        if (isAlarmPlaying) {
-            stopAlarm();
+    // Connect to the WebSocket server
+    const socket = io("http://localhost:8080");
+
+    // Listen for buzzer updates
+    socket.on("buzzer_update", (data) => {
+        const buzzerState = document.getElementById("buzzerState");
+        const buzzerOffButton = document.getElementById("buzzerOffButton");
+
+        if (data.buzzer_on) {
+            buzzerState.textContent = "Buzzer is ON";
+            buzzerOffButton.disabled = false;
+        } else {
+            buzzerState.textContent = "Buzzer is OFF";
+            buzzerOffButton.disabled = true;
         }
     });
 
-    document.getElementById("triggerAlarmButton").addEventListener("click", () => {
-        if (!isAlarmPlaying) {
-            triggerAlarm();
-        }
+    // Buzzer Off Button
+    document.getElementById("buzzerOffButton").addEventListener("click", () => {
+        fetch("http://localhost:8080/buzzer/stop")
+            .then(response => {
+                if (response.ok) {
+                    alert("Buzzer turned off!");
+                } else {
+                    alert("Failed to turn off the buzzer.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
     });
 
-    function triggerAlarm() {
-        isAlarmPlaying = true;
+    // Function to fetch the buzzer state
+    function fetchBuzzerState() {
+        fetch("http://localhost:8080/buzzer/state")
+            .then(response => response.json())
+            .then(data => {
+                const buzzerState = document.getElementById("buzzerState");
+                const buzzerOffButton = document.getElementById("buzzerOffButton");
 
-        // Update button states
-        document.getElementById("alarmButton").textContent = "Stop Alarm";
-        document.getElementById("alarmButton").disabled = false;
-        document.getElementById("triggerAlarmButton").disabled = true;
-
-        fetch("http://localhost:8080/alarm/start")
-            .then(response => {
-                if (response.ok) {
-                    alert("Alarm is ringing!");
+                if (data.buzzer_on) {
+                    buzzerState.textContent = "Buzzer is ON";
+                    buzzerOffButton.disabled = false;
+                } else {
+                    buzzerState.textContent = "Buzzer is OFF";
+                    buzzerOffButton.disabled = true;
                 }
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => console.error("Error fetching buzzer state:", error));
     }
 
-    function stopAlarm() {
-        isAlarmPlaying = false;
+    // document.getElementById("alarmButton").addEventListener("click", () => {
+    //     if (isAlarmPlaying) {
+    //         stopAlarm();
+    //     }
+    // });
 
-        // Update button states
-        document.getElementById("alarmButton").textContent = "Alarm";
-        document.getElementById("alarmButton").disabled = true;
-        document.getElementById("triggerAlarmButton").disabled = false;
+    // document.getElementById("triggerAlarmButton").addEventListener("click", () => {
+    //     if (!isAlarmPlaying) {
+    //         triggerAlarm();
+    //     }
+    // });
 
-        fetch("http://localhost:8080/alarm/stop")
-            .then(response => {
-                if (response.ok) {
-                    alert("Alarm stopped.");
-                }
-            })
-            .catch(error => console.error("Error:", error));
-    }
+    // function triggerAlarm() {
+    //     isAlarmPlaying = true;
+
+    //     // Update button states
+    //     document.getElementById("alarmButton").textContent = "Stop Alarm";
+    //     document.getElementById("alarmButton").disabled = false;
+    //     document.getElementById("triggerAlarmButton").disabled = true;
+
+    //     fetch("http://localhost:8080/alarm/start")
+    //         .then(response => {
+    //             if (response.ok) {
+    //                 alert("Alarm is ringing!");
+    //             }
+    //         })
+    //         .catch(error => console.error("Error:", error));
+    // }
+
+    // function stopAlarm() {
+    //     isAlarmPlaying = false;
+
+    //     // Update button states
+    //     document.getElementById("alarmButton").textContent = "Alarm";
+    //     document.getElementById("alarmButton").disabled = true;
+    //     document.getElementById("triggerAlarmButton").disabled = false;
+
+    //     fetch("http://localhost:8080/alarm/stop")
+    //         .then(response => {
+    //             if (response.ok) {
+    //                 alert("Alarm stopped.");
+    //             }
+    //         })
+    //         .catch(error => console.error("Error:", error));
+    // }
 
     function showConfirmModal(onConfirm) {
         const modal = document.getElementById("confirmModal");
@@ -90,4 +138,3 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 });
-

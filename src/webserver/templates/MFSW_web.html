@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MFSW Webpage</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="http://localhost:8080/static/MFSW_web.js"></script>
     <link rel="stylesheet" href="../static/styles.css">
 </head>
@@ -13,8 +14,13 @@
     <h1>MFSW Webpage</h1>
     <button id="cameraStartButton">Start Camera</button>
     <button id="cameraStopButton">Stop Camera</button>
-    <button id="alarmButton" disabled>Alarm</button>
-    <button id="triggerAlarmButton">Trigger Alarm</button>
+    <!-- <button id="alarmButton" disabled>Alarm</button>
+    <button id="triggerAlarmButton">Trigger Alarm</button> -->
+
+    <div>
+        <p id="buzzerState">Buzzer is OFF</p>
+        <button id="buzzerOffButton" disabled>Turn Buzzer Off</button>
+    </div>
 
     <div id="confirmModal"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000;">
