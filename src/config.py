@@ -2,7 +2,7 @@ import os
 
 IP = "192.168.29.131"
 PORT = 6969
-HEADER_SIZE = 4
+HEADER_SIZE = 5
 BUFFER_SIZE = 1024
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

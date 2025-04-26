@@ -13,7 +13,7 @@ constexpr int APP_PORT = 5005;
 constexpr unsigned long WIFI_TIMEOUT_MS = 10000; // 10 seconds timeout
 constexpr unsigned long ACK_TIMEOUT_MS = 1000;   // 500ms timeout for acknowledgment
 int LED_PIN = D1;
-int IR_pin = D11;
+int IR_pin = D0;
 
 AsyncUDP udp;
 AsyncUDP app;
@@ -21,12 +21,12 @@ IPAddress clientIP;
 bool clientConnected = false;
 bool cameraEnabled = true;
 
-int IR_read(){
+int IR_read()
+{
     int value = digitalRead(IR_pin);
     Serial.printf("IR sensor value: %d\n", value);
     return value;
 }
-
 
 void initializeCamera()
 {
@@ -121,7 +121,7 @@ bool setupAppListener(int port)
     {
         Serial.printf("App Listening on IP: %s, Port: %d\n", WiFi.localIP().toString().c_str(), port);
         app.onPacket([](AsyncUDPPacket packet)
-                     { handleAppPacket(packet); }); 
+                     { handleAppPacket(packet); });
         return true;
     }
     else
