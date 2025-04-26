@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("MFSW_web.js loaded");
+    console.log("MFWS_web.js loaded");
 
     let isAlarmPlaying = false;
 

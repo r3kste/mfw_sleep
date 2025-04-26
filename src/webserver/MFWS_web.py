@@ -70,6 +70,9 @@ def stop_buzzer():
     global alarm_triggered
     alarm_triggered = False
     print("Buzzer state updated: OFF")
+    # Broadcast "BUZZER_OFF" to the network
+    broadcast_message("GUY_ALIVE")
+    # Notify the frontend via WebSocket
     socketio.emit("buzzer_update", {"buzzer_on": False})
     return "Buzzer stopped", 200
 
