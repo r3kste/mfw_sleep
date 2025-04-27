@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS  # Import Flask-CORS
 import socket
 import threading
-import os
-import pygame
+# import os
+# import pygame
 
 from flask_socketio import SocketIO
 
@@ -44,6 +44,9 @@ def broadcast_message(message):
     sock.sendto(message.encode("utf-8"), ("255.255.255.255", UDP_PORT))
     print(f"Broadcasted message: {message}")
 
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("MFWS_web.html")
 
 @app.route("/camera/start", methods=["GET"])
 def start_camera():
