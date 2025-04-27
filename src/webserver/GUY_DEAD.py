@@ -8,6 +8,7 @@ def send_message():
     message = "GUY_DEAD"
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Enable broadcasting
             s.sendto(message.encode('utf-8'), (HOST, PORT))
             print(f"Message '{message}' sent to {HOST}:{PORT} via UDP")
         except Exception as e:
