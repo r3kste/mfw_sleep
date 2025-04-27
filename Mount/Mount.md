@@ -1,0 +1,1 @@
+Folder containing Design for hardware of the project.
