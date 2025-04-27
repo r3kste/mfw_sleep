@@ -11,6 +11,8 @@ import config
 import esp32cam
 from model.train import EyeOpennessModel
 
+frame_counter = 0
+
 
 class Algorithm:
     """Class containing various algorithms for detecting sleepiness."""
@@ -21,12 +23,12 @@ class Algorithm:
         # look at last 10 predictions
         # if average is below 0.5, return True
 
-        preds = predictions[-10:]
+        preds = list(predictions)[-40:]
         if len(preds) == 0:
             return False
 
         mean_pred = sum(preds) / len(preds)
-        return mean_pred < 0.5
+        return mean_pred < 0.25
 
     @staticmethod
     def perclos(predictions):
@@ -69,7 +71,7 @@ def update_graph():
 
 
 def main(esp: esp32cam.ESP32Cam, user: str):
-    global device, prediction_history
+    global device, prediction_history, frame_counter
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = EyeOpennessModel().to(device)
     model.load_state_dict(
@@ -92,6 +94,7 @@ def main(esp: esp32cam.ESP32Cam, user: str):
         if not esp.frame_queue.empty():
             frame_data = esp.frame_queue.get()
             frame = esp.process_frame(frame_data)
+            frame_counter += 1
 
             if frame is not None:
                 input_tensor = preprocess_frame(frame)
@@ -99,6 +102,13 @@ def main(esp: esp32cam.ESP32Cam, user: str):
                     prediction = model(input_tensor).item()
 
                 prediction_history.append(prediction)
+
+                # Check if the user is sleepy every 100 frames
+                if frame_counter % 40 == 0:
+                    is_sleepy = Algorithm.simple_algorithm(prediction_history)
+                    if is_sleepy:
+                        print("User is sleepy!")
+                        esp.broadcast("GUY_DEAD", 5005)
 
                 # Overlay prediction on the frame
                 cv2.putText(

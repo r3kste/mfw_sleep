@@ -25,6 +25,7 @@ class ESP32Cam:
         self.buffer_size = buffer_size
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sock.bind((self.udp_ip, self.port))
         self.current_packets = {}
         self.expected_packets = 0
@@ -40,6 +41,10 @@ class ESP32Cam:
     def send(self, message: str):
         message = message.encode("utf-8")
         self.sock.sendto(message, (self.ip, self.port))
+
+    def broadcast(self, message: str, port: int):
+        message = message.encode("utf-8")
+        self.sock.sendto(message, ("255.255.255.255", port))
 
     def handshake(self):
         """Perform the initial handshake with the sender."""
@@ -96,7 +101,6 @@ class ESP32Cam:
 
             # Store the IR status in a variable
             self.ir_status = ir_status
-            print(f"Received IR status: {self.ir_status}")
 
             if packet_num == 0:
                 self.current_packets = {}
